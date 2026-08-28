@@ -9,8 +9,8 @@ public enum ErrorCode {
   EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT),
   INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED),
   VALIDATION_ERROR(HttpStatus.BAD_REQUEST),
+  INVALID_TOKEN(HttpStatus.UNAUTHORIZED),
   INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR);
-
 
   private final HttpStatus status;
 

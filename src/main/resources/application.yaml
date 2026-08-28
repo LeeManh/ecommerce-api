@@ -19,3 +19,16 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+jwt:
+  access-token:
+    secret: ed49c25cda3774ccceb0985ac6b8da55ff99951ffce8665d5b3680d7bf810939
+    expiration: 900000        # 15 phút
+  refresh-token:
+    secret: 309ce6b2d6f236d3994a254bb5199f47d723d19a1e822c0bb5aa53ca46170c84
+    expiration: 604800000     # 7 ngày

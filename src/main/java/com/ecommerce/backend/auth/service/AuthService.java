@@ -1,5 +1,6 @@
 package com.ecommerce.backend.auth.service;
 
+import com.ecommerce.backend.auth.dto.AuthResponse;
 import com.ecommerce.backend.auth.dto.LoginRequest;
 import com.ecommerce.backend.auth.dto.RegisterRequest;
 import com.ecommerce.backend.auth.entity.Role;
@@ -24,6 +25,8 @@ public class AuthService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     @Transactional
     public UserResponse register(RegisterRequest request) {
@@ -45,7 +48,7 @@ public class AuthService {
         return UserResponse.from(user);
     }
 
-    public UserResponse login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new ApiException(ErrorCode.INVALID_CREDENTIALS, "Invalid email or password"));
 
@@ -53,6 +56,32 @@ public class AuthService {
             throw new ApiException(ErrorCode.INVALID_CREDENTIALS, "Invalid email or password");
         }
 
-        return UserResponse.from(user);
+        return issueTokens(user);
+    }
+
+    public AuthResponse refreshToken(String refreshToken) {
+        if (!jwtService.isRefreshTokenValid(refreshToken)) {
+            throw new ApiException(ErrorCode.INVALID_TOKEN, "Refresh token is invalid or expired");
+        }
+
+        String email = refreshTokenService.getEmail(refreshToken);
+        User user =
+                userRepository
+                        .findByEmail(email)
+                        .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND, "User not found"));
+
+        refreshTokenService.revoke(refreshToken);
+        return issueTokens(user);
+    }
+
+    public void logout(String refreshToken) {
+        refreshTokenService.revoke(refreshToken);
+    }
+
+    private AuthResponse issueTokens(User user) {
+        String accessToken = jwtService.generateAccessToken(user.getEmail());
+        String refreshToken = jwtService.generateRefreshToken(user.getEmail());
+        refreshTokenService.store(user.getEmail(), refreshToken);
+        return new AuthResponse(accessToken, refreshToken, UserResponse.from(user));
     }
 }
