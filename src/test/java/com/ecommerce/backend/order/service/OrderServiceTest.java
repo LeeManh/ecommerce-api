@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.ecommerce.backend.common.exception.ApiException;
 import com.ecommerce.backend.common.exception.ErrorCode;
+import com.ecommerce.backend.order.config.OrderProperties;
 import com.ecommerce.backend.order.dto.CreateOrderRequest;
 import com.ecommerce.backend.order.dto.OrderResponse;
 import com.ecommerce.backend.order.entity.Cart;
@@ -26,6 +27,8 @@ import com.ecommerce.backend.product.entity.Product;
 import com.ecommerce.backend.user.entity.User;
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +48,7 @@ class OrderServiceTest {
   @Mock private ApplicationEventPublisher eventPublisher;
   @Mock private StringRedisTemplate redisTemplate;
   @Mock private ValueOperations<String, String> valueOperations;
+  @Mock private OrderProperties orderProperties;
 
   @InjectMocks private OrderService orderService;
 
@@ -209,6 +213,50 @@ class OrderServiceTest {
         .isInstanceOf(ApiException.class)
         .extracting(ex -> ((ApiException) ex).getCode())
         .isEqualTo(ErrorCode.ORDER_NOT_FOUND);
+  }
+
+  @Test
+  void findExpiredPendingOrderIds_shouldReturnIdsFromRepository() {
+    when(orderProperties.pendingExpirationMinutes()).thenReturn(30L);
+    when(orderRepository.findByStatusAndCreatedAtBefore(
+            eq(OrderStatus.PENDING), any(Instant.class)))
+        .thenReturn(List.of(buildPendingOrder()));
+
+    List<Long> expiredIds = orderService.findExpiredPendingOrderIds();
+
+    assertThat(expiredIds).containsExactly(500L);
+  }
+
+  @Test
+  void cancelExpiredOrder_shouldCancelAndPublishEvent_whenOrderStillPending() {
+    Order order = buildPendingOrder();
+    when(orderRepository.findById(500L)).thenReturn(Optional.of(order));
+
+    orderService.cancelExpiredOrder(500L);
+
+    assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+    verify(eventPublisher).publishEvent(any(OrderCancelledEvent.class));
+  }
+
+  @Test
+  void cancelExpiredOrder_shouldDoNothing_whenOrderAlreadyPaid() {
+    Order order = buildPendingOrder();
+    order.setStatus(OrderStatus.PAID);
+    when(orderRepository.findById(500L)).thenReturn(Optional.of(order));
+
+    orderService.cancelExpiredOrder(500L);
+
+    assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);
+    verify(eventPublisher, never()).publishEvent(any(OrderCancelledEvent.class));
+  }
+
+  @Test
+  void cancelExpiredOrder_shouldDoNothing_whenOrderNotFound() {
+    when(orderRepository.findById(999L)).thenReturn(Optional.empty());
+
+    orderService.cancelExpiredOrder(999L);
+
+    verify(eventPublisher, never()).publishEvent(any(OrderCancelledEvent.class));
   }
 
   private Order buildPendingOrder() {

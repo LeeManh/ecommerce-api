@@ -2,6 +2,7 @@ package com.ecommerce.backend.order.service;
 
 import com.ecommerce.backend.common.exception.ApiException;
 import com.ecommerce.backend.common.exception.ErrorCode;
+import com.ecommerce.backend.order.config.OrderProperties;
 import com.ecommerce.backend.order.dto.CreateOrderRequest;
 import com.ecommerce.backend.order.dto.OrderResponse;
 import com.ecommerce.backend.order.dto.OrderSummaryResponse;
@@ -19,15 +20,19 @@ import com.ecommerce.backend.user.entity.User;
 import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderService {
@@ -40,6 +45,7 @@ public class OrderService {
   private final PaymentService paymentService;
   private final ApplicationEventPublisher eventPublisher;
   private final StringRedisTemplate redisTemplate;
+  private final OrderProperties orderProperties;
 
   @Transactional
   public OrderResponse createOrder(User user, String idempotencyKey, CreateOrderRequest request) {
@@ -145,6 +151,33 @@ public class OrderService {
 
     order.setStatus(OrderStatus.PAID);
     return OrderResponse.from(order);
+  }
+
+  public List<Long> findExpiredPendingOrderIds() {
+    Instant cutoff =
+        Instant.now().minus(orderProperties.pendingExpirationMinutes(), ChronoUnit.MINUTES);
+    return orderRepository.findByStatusAndCreatedAtBefore(OrderStatus.PENDING, cutoff).stream()
+        .map(Order::getId)
+        .toList();
+  }
+
+  @Transactional
+  public void cancelExpiredOrder(Long orderId) {
+    Order order = orderRepository.findById(orderId).orElse(null);
+    if (order == null || order.getStatus() != OrderStatus.PENDING) {
+      return;
+    }
+
+    order.setStatus(OrderStatus.CANCELLED);
+
+    List<OrderCancelledEvent.Item> eventItems =
+        order.getItems().stream()
+            .map(
+                item -> new OrderCancelledEvent.Item(item.getProduct().getId(), item.getQuantity()))
+            .toList();
+    eventPublisher.publishEvent(new OrderCancelledEvent(order.getId(), eventItems));
+
+    log.info("Auto-cancelled expired pending order {}", orderId);
   }
 
   @Transactional

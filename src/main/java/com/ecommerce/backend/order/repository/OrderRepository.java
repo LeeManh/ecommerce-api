@@ -1,10 +1,15 @@
 package com.ecommerce.backend.order.repository;
 
 import com.ecommerce.backend.order.entity.Order;
+import com.ecommerce.backend.order.entity.OrderStatus;
+import java.time.Instant;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
   Page<Order> findByUserId(Long userId, Pageable pageable);
+
+  List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, Instant cutoff);
 }
