@@ -10,6 +10,7 @@ import com.ecommerce.backend.order.entity.CartItem;
 import com.ecommerce.backend.order.entity.Order;
 import com.ecommerce.backend.order.entity.OrderItem;
 import com.ecommerce.backend.order.entity.OrderStatus;
+import com.ecommerce.backend.order.event.OrderCreatedEvent;
 import com.ecommerce.backend.order.repository.CartRepository;
 import com.ecommerce.backend.order.repository.OrderRepository;
 import com.ecommerce.backend.product.entity.Product;
@@ -19,6 +20,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ public class OrderService {
   private final OrderRepository orderRepository;
   private final CartRepository cartRepository;
   private final PaymentService paymentService;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Transactional
   public OrderResponse createOrder(User user, CreateOrderRequest request) {
@@ -79,6 +82,12 @@ public class OrderService {
     Order saved = orderRepository.save(order);
 
     cart.getItems().clear();
+
+    List<OrderCreatedEvent.Item> eventItems =
+        orderItems.stream()
+            .map(item -> new OrderCreatedEvent.Item(item.getProduct().getId(), item.getQuantity()))
+            .toList();
+    eventPublisher.publishEvent(new OrderCreatedEvent(saved.getId(), user.getId(), eventItems));
 
     return OrderResponse.from(saved);
   }
