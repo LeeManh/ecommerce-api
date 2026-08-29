@@ -3,6 +3,8 @@ package com.ecommerce.backend.order.service;
 import com.ecommerce.backend.common.exception.ApiException;
 import com.ecommerce.backend.common.exception.ErrorCode;
 import com.ecommerce.backend.order.config.OrderProperties;
+import com.ecommerce.backend.order.dto.AdminOrderResponse;
+import com.ecommerce.backend.order.dto.AdminOrderSummaryResponse;
 import com.ecommerce.backend.order.dto.CreateOrderRequest;
 import com.ecommerce.backend.order.dto.OrderResponse;
 import com.ecommerce.backend.order.dto.OrderSummaryResponse;
@@ -137,15 +139,7 @@ public class OrderService {
 
     if (!success) {
       order.setStatus(OrderStatus.CANCELLED);
-
-      List<OrderCancelledEvent.Item> eventItems =
-          order.getItems().stream()
-              .map(
-                  item ->
-                      new OrderCancelledEvent.Item(item.getProduct().getId(), item.getQuantity()))
-              .toList();
-      eventPublisher.publishEvent(new OrderCancelledEvent(order.getId(), eventItems));
-
+      publishOrderCancelledEvent(order);
       throw new ApiException(ErrorCode.PAYMENT_FAILED, "Payment failed for order: " + orderId);
     }
 
@@ -169,13 +163,7 @@ public class OrderService {
     }
 
     order.setStatus(OrderStatus.CANCELLED);
-
-    List<OrderCancelledEvent.Item> eventItems =
-        order.getItems().stream()
-            .map(
-                item -> new OrderCancelledEvent.Item(item.getProduct().getId(), item.getQuantity()))
-            .toList();
-    eventPublisher.publishEvent(new OrderCancelledEvent(order.getId(), eventItems));
+    publishOrderCancelledEvent(order);
 
     log.info("Auto-cancelled expired pending order {}", orderId);
   }
@@ -190,5 +178,51 @@ public class OrderService {
                 () -> new ApiException(ErrorCode.ORDER_NOT_FOUND, "Order not found: " + orderId));
 
     return OrderResponse.from(order);
+  }
+
+  @Transactional
+  public Page<AdminOrderSummaryResponse> searchOrdersForAdmin(
+      OrderStatus status, Long userId, Pageable pageable) {
+    return orderRepository
+        .findAll(OrderSpecification.filter(status, userId), pageable)
+        .map(AdminOrderSummaryResponse::from);
+  }
+
+  @Transactional
+  public AdminOrderResponse getOrderForAdmin(Long orderId) {
+    Order order =
+        orderRepository
+            .findById(orderId)
+            .orElseThrow(
+                () -> new ApiException(ErrorCode.ORDER_NOT_FOUND, "Order not found: " + orderId));
+    return AdminOrderResponse.from(order);
+  }
+
+  @Transactional
+  public AdminOrderResponse cancelOrderByAdmin(Long orderId) {
+    Order order =
+        orderRepository
+            .findById(orderId)
+            .orElseThrow(
+                () -> new ApiException(ErrorCode.ORDER_NOT_FOUND, "Order not found: " + orderId));
+
+    if (order.getStatus() == OrderStatus.CANCELLED) {
+      throw new ApiException(ErrorCode.ORDER_NOT_PENDING, "Order already cancelled: " + orderId);
+    }
+
+    order.setStatus(OrderStatus.CANCELLED);
+    publishOrderCancelledEvent(order);
+
+    log.info("Order {} cancelled by admin", orderId);
+    return AdminOrderResponse.from(order);
+  }
+
+  private void publishOrderCancelledEvent(Order order) {
+    List<OrderCancelledEvent.Item> eventItems =
+        order.getItems().stream()
+            .map(
+                item -> new OrderCancelledEvent.Item(item.getProduct().getId(), item.getQuantity()))
+            .toList();
+    eventPublisher.publishEvent(new OrderCancelledEvent(order.getId(), eventItems));
   }
 }
