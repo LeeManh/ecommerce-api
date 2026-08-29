@@ -1,5 +1,6 @@
 package com.ecommerce.backend.inventory.consumer;
 
+import com.ecommerce.backend.common.logging.CorrelationIdFilter;
 import com.ecommerce.backend.inventory.service.InventoryService;
 import com.ecommerce.backend.order.event.OrderCancelledEvent;
 import com.ecommerce.backend.order.event.OrderCancelledEventListener;
@@ -7,7 +8,9 @@ import com.ecommerce.backend.order.event.OrderCreatedEvent;
 import com.ecommerce.backend.order.event.OrderCreatedEventListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 
@@ -22,27 +25,41 @@ public class InventoryOrderEventConsumer {
   private final InventoryService inventoryService;
 
   @KafkaListener(topics = OrderCreatedEventListener.TOPIC, groupId = GROUP_ID)
-  public void onOrderCreated(OrderCreatedEvent event) {
-    log.info("Received order.created event for order {}", event.orderId());
-    event
-        .items()
-        .forEach(
-            item ->
-                retryOnConflict(
-                    () -> inventoryService.deduct(item.productId(), item.quantity()),
-                    "deduct product " + item.productId()));
+  public void onOrderCreated(
+      OrderCreatedEvent event,
+      @Header(name = CorrelationIdFilter.MDC_KEY, required = false) String correlationId) {
+    MDC.put(CorrelationIdFilter.MDC_KEY, correlationId != null ? correlationId : "unknown");
+    try {
+      log.info("Received order.created event for order {}", event.orderId());
+      event
+          .items()
+          .forEach(
+              item ->
+                  retryOnConflict(
+                      () -> inventoryService.deduct(item.productId(), item.quantity()),
+                      "deduct product " + item.productId()));
+    } finally {
+      MDC.remove(CorrelationIdFilter.MDC_KEY);
+    }
   }
 
   @KafkaListener(topics = OrderCancelledEventListener.TOPIC, groupId = GROUP_ID)
-  public void onOrderCancelled(OrderCancelledEvent event) {
-    log.info("Received order.cancelled event for order {}", event.orderId());
-    event
-        .items()
-        .forEach(
-            item ->
-                retryOnConflict(
-                    () -> inventoryService.restock(item.productId(), item.quantity()),
-                    "restock product " + item.productId()));
+  public void onOrderCancelled(
+      OrderCancelledEvent event,
+      @Header(name = CorrelationIdFilter.MDC_KEY, required = false) String correlationId) {
+    MDC.put(CorrelationIdFilter.MDC_KEY, correlationId != null ? correlationId : "unknown");
+    try {
+      log.info("Received order.cancelled event for order {}", event.orderId());
+      event
+          .items()
+          .forEach(
+              item ->
+                  retryOnConflict(
+                      () -> inventoryService.restock(item.productId(), item.quantity()),
+                      "restock product " + item.productId()));
+    } finally {
+      MDC.remove(CorrelationIdFilter.MDC_KEY);
+    }
   }
 
   private void retryOnConflict(Runnable action, String description) {
