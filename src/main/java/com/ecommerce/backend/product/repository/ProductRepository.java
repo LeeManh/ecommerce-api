@@ -10,4 +10,6 @@ public interface ProductRepository
   boolean existsBySku(String sku);
 
   Optional<Product> findByIdAndActiveTrue(Long id);
+
+  boolean existsByCategoriesId(Long categoryId);
 }
