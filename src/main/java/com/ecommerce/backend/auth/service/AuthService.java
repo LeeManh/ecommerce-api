@@ -62,6 +62,10 @@ public class AuthService {
       throw new ApiException(ErrorCode.INVALID_CREDENTIALS, "Invalid email or password");
     }
 
+    if (!user.isEnabled()) {
+      throw new ApiException(ErrorCode.ACCOUNT_DISABLED, "Account has been disabled");
+    }
+
     return issueTokens(user);
   }
 

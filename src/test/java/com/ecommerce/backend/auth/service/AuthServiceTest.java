@@ -139,6 +139,29 @@ class AuthServiceTest {
   }
 
   @Test
+  void login_shouldThrow_whenAccountDisabled() {
+    LoginRequest request = new LoginRequest("user@shop.com", "password123");
+    User user =
+        User.builder()
+            .id(1L)
+            .email(request.email())
+            .password("hashed-password")
+            .roles(Set.of())
+            .enabled(false)
+            .build();
+
+    when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(user));
+    when(passwordEncoder.matches(request.password(), user.getPassword())).thenReturn(true);
+
+    assertThatThrownBy(() -> authService.login(request))
+        .isInstanceOf(ApiException.class)
+        .extracting(ex -> ((ApiException) ex).getCode())
+        .isEqualTo(ErrorCode.ACCOUNT_DISABLED);
+
+    verify(jwtService, never()).generateAccessToken(anyString());
+  }
+
+  @Test
   void logout_shouldRevokeRefreshToken() {
     authService.logout("some-refresh-token");
 

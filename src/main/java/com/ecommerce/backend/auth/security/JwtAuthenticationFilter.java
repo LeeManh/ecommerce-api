@@ -1,6 +1,7 @@
 package com.ecommerce.backend.auth.security;
 
 import com.ecommerce.backend.auth.service.JwtService;
+import com.ecommerce.backend.user.entity.User;
 import com.ecommerce.backend.user.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -43,6 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       String email = jwtService.extractEmailFromAccessToken(token);
       userRepository
           .findByEmail(email)
+          .filter(User::isEnabled)
           .ifPresent(
               user -> {
                 List<SimpleGrantedAuthority> authorities =
