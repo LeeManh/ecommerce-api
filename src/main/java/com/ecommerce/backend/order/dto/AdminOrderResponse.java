@@ -14,7 +14,8 @@ public record AdminOrderResponse(
     String shippingAddress,
     BigDecimal totalAmount,
     List<OrderResponse.Item> items,
-    Instant createdAt) {
+    Instant createdAt,
+    Instant paidAt) {
 
   public static AdminOrderResponse from(Order order) {
     List<OrderResponse.Item> items =
@@ -37,6 +38,7 @@ public record AdminOrderResponse(
         order.getShippingAddress(),
         order.getTotalAmount(),
         items,
-        order.getCreatedAt());
+        order.getCreatedAt(),
+        order.getPaidAt());
   }
 }

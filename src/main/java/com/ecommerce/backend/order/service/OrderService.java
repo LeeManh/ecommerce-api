@@ -144,6 +144,7 @@ public class OrderService {
     }
 
     order.setStatus(OrderStatus.PAID);
+    order.setPaidAt(Instant.now());
     return OrderResponse.from(order);
   }
 

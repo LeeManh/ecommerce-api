@@ -12,7 +12,8 @@ public record OrderResponse(
     String shippingAddress,
     BigDecimal totalAmount,
     List<Item> items,
-    Instant createdAt) {
+    Instant createdAt,
+    Instant paidAt) {
 
   public record Item(
       Long productId,
@@ -39,6 +40,7 @@ public record OrderResponse(
         order.getShippingAddress(),
         order.getTotalAmount(),
         items,
-        order.getCreatedAt());
+        order.getCreatedAt(),
+        order.getPaidAt());
   }
 }

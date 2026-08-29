@@ -12,6 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Builder;
@@ -41,6 +42,9 @@ public class Order extends BaseEntity {
 
   @Column(name = "total_amount", nullable = false, precision = 14, scale = 2)
   private BigDecimal totalAmount;
+
+  @Column(name = "paid_at")
+  private Instant paidAt;
 
   @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default

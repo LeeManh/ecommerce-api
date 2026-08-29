@@ -11,7 +11,8 @@ public record AdminOrderSummaryResponse(
     String userEmail,
     OrderStatus status,
     BigDecimal totalAmount,
-    Instant createdAt) {
+    Instant createdAt,
+    Instant paidAt) {
 
   public static AdminOrderSummaryResponse from(Order order) {
     return new AdminOrderSummaryResponse(
@@ -20,6 +21,7 @@ public record AdminOrderSummaryResponse(
         order.getUser().getEmail(),
         order.getStatus(),
         order.getTotalAmount(),
-        order.getCreatedAt());
+        order.getCreatedAt(),
+        order.getPaidAt());
   }
 }
