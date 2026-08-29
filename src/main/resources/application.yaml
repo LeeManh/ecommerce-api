@@ -25,6 +25,12 @@ spring:
       host: localhost
       port: 6379
 
+  kafka:
+    bootstrap-servers: localhost:9094
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
 jwt:
   access-token:
     secret: ed49c25cda3774ccceb0985ac6b8da55ff99951ffce8665d5b3680d7bf810939
