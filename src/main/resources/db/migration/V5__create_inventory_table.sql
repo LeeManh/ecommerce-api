@@ -1,0 +1,8 @@
+CREATE TABLE inventories (
+    id BIGSERIAL PRIMARY KEY,
+    product_id BIGINT NOT NULL UNIQUE REFERENCES products(id) ON DELETE CASCADE,
+    quantity INT NOT NULL DEFAULT 0,
+    version BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);

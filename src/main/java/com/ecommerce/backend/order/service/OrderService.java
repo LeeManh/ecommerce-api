@@ -10,6 +10,7 @@ import com.ecommerce.backend.order.entity.CartItem;
 import com.ecommerce.backend.order.entity.Order;
 import com.ecommerce.backend.order.entity.OrderItem;
 import com.ecommerce.backend.order.entity.OrderStatus;
+import com.ecommerce.backend.order.event.OrderCancelledEvent;
 import com.ecommerce.backend.order.event.OrderCreatedEvent;
 import com.ecommerce.backend.order.repository.CartRepository;
 import com.ecommerce.backend.order.repository.OrderRepository;
@@ -112,7 +113,7 @@ public class OrderService {
     return orderRepository.findByUserId(user.getId(), pageable).map(OrderSummaryResponse::from);
   }
 
-  @Transactional
+  @Transactional(dontRollbackOn = ApiException.class)
   public OrderResponse pay(User user, Long orderId) {
     Order order =
         orderRepository
@@ -130,6 +131,15 @@ public class OrderService {
 
     if (!success) {
       order.setStatus(OrderStatus.CANCELLED);
+
+      List<OrderCancelledEvent.Item> eventItems =
+          order.getItems().stream()
+              .map(
+                  item ->
+                      new OrderCancelledEvent.Item(item.getProduct().getId(), item.getQuantity()))
+              .toList();
+      eventPublisher.publishEvent(new OrderCancelledEvent(order.getId(), eventItems));
+
       throw new ApiException(ErrorCode.PAYMENT_FAILED, "Payment failed for order: " + orderId);
     }
 

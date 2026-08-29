@@ -2,6 +2,7 @@ package com.ecommerce.backend.product.service;
 
 import com.ecommerce.backend.common.exception.ApiException;
 import com.ecommerce.backend.common.exception.ErrorCode;
+import com.ecommerce.backend.inventory.service.InventoryService;
 import com.ecommerce.backend.product.dto.ProductRequest;
 import com.ecommerce.backend.product.dto.ProductResponse;
 import com.ecommerce.backend.product.dto.ProductSummaryResponse;
@@ -28,6 +29,7 @@ public class ProductService {
 
   private final ProductRepository productRepository;
   private final CategoryRepository categoryRepository;
+  private final InventoryService inventoryService;
 
   @Transactional
   public ProductResponse create(ProductRequest request) {
@@ -46,7 +48,10 @@ public class ProductService {
 
     product.getImages().addAll(buildImages(request.imageUrls(), product));
 
-    return ProductResponse.from(productRepository.save(product));
+    Product saved = productRepository.save(product);
+    inventoryService.createForProduct(saved);
+
+    return ProductResponse.from(saved);
   }
 
   @Transactional

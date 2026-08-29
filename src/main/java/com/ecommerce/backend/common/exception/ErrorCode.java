@@ -20,6 +20,7 @@ public enum ErrorCode {
   ORDER_NOT_PENDING(HttpStatus.CONFLICT),
   PAYMENT_FAILED(HttpStatus.PAYMENT_REQUIRED),
   DUPLICATE_REQUEST(HttpStatus.CONFLICT),
+  INVENTORY_NOT_FOUND(HttpStatus.NOT_FOUND),
   INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR);
 
   private final HttpStatus status;
