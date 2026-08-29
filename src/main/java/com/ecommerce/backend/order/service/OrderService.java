@@ -29,6 +29,7 @@ public class OrderService {
 
   private final OrderRepository orderRepository;
   private final CartRepository cartRepository;
+  private final PaymentService paymentService;
 
   @Transactional
   public OrderResponse createOrder(User user, CreateOrderRequest request) {
@@ -85,6 +86,31 @@ public class OrderService {
   @Transactional
   public Page<OrderSummaryResponse> getOrders(User user, Pageable pageable) {
     return orderRepository.findByUserId(user.getId(), pageable).map(OrderSummaryResponse::from);
+  }
+
+  @Transactional
+  public OrderResponse pay(User user, Long orderId) {
+    Order order =
+        orderRepository
+            .findById(orderId)
+            .filter(o -> o.getUser().getId().equals(user.getId()))
+            .orElseThrow(
+                () -> new ApiException(ErrorCode.ORDER_NOT_FOUND, "Order not found: " + orderId));
+
+    if (order.getStatus() != OrderStatus.PENDING) {
+      throw new ApiException(
+          ErrorCode.ORDER_NOT_PENDING, "Order is not pending payment: " + orderId);
+    }
+
+    boolean success = paymentService.charge(order.getId(), order.getTotalAmount());
+
+    if (!success) {
+      order.setStatus(OrderStatus.CANCELLED);
+      throw new ApiException(ErrorCode.PAYMENT_FAILED, "Payment failed for order: " + orderId);
+    }
+
+    order.setStatus(OrderStatus.PAID);
+    return OrderResponse.from(order);
   }
 
   @Transactional

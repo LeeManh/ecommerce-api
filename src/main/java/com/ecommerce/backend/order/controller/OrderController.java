@@ -42,4 +42,9 @@ public class OrderController {
       @AuthenticationPrincipal User user, @PathVariable Long id) {
     return ApiResponse.success(orderService.getOrder(user, id), "OK");
   }
+
+  @PostMapping("/{id}/pay")
+  public ApiResponse<OrderResponse> pay(@AuthenticationPrincipal User user, @PathVariable Long id) {
+    return ApiResponse.success(orderService.pay(user, id), "Payment successful");
+  }
 }

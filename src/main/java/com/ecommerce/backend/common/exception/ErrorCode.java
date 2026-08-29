@@ -17,6 +17,8 @@ public enum ErrorCode {
   CART_EMPTY(HttpStatus.BAD_REQUEST),
   PRODUCT_NOT_AVAILABLE(HttpStatus.CONFLICT),
   ORDER_NOT_FOUND(HttpStatus.NOT_FOUND),
+  ORDER_NOT_PENDING(HttpStatus.CONFLICT),
+  PAYMENT_FAILED(HttpStatus.PAYMENT_REQUIRED),
   INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR);
 
   private final HttpStatus status;
