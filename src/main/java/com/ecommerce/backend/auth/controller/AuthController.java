@@ -16,27 +16,26 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthService authService;
+  private final AuthService authService;
 
-    @PostMapping("/register")
-    public ApiResponse<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
-        return ApiResponse.success(authService.register(request), "Registration successful");
-    }
+  @PostMapping("/register")
+  public ApiResponse<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
+    return ApiResponse.success(authService.register(request), "Registration successful");
+  }
 
-    @PostMapping("/login")
-    public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ApiResponse.success(authService.login(request), "Login successful");
-    }
+  @PostMapping("/login")
+  public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+    return ApiResponse.success(authService.login(request), "Login successful");
+  }
 
-    @PostMapping("/refresh-token")
-    public ApiResponse<AuthResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
-        return ApiResponse.success(authService.refreshToken(request.refreshToken()), "Token refreshed");
-    }
+  @PostMapping("/refresh-token")
+  public ApiResponse<AuthResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+    return ApiResponse.success(authService.refreshToken(request.refreshToken()), "Token refreshed");
+  }
 
-    @PostMapping("/logout")
-    public ApiResponse<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
-        authService.logout(request.refreshToken());
-        return ApiResponse.success(null, "Logout successful");
-    }
-
+  @PostMapping("/logout")
+  public ApiResponse<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
+    authService.logout(request.refreshToken());
+    return ApiResponse.success(null, "Logout successful");
+  }
 }
