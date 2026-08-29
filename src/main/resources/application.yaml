@@ -48,3 +48,8 @@ jwt:
 logging:
   pattern:
     console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSS} %5p [%15.15t] [correlationId=%X{correlationId:-}] %-40.40logger{39} : %m%n%wEx"
+
+cors:
+  allowed-origins:
+    - http://localhost:3000
+    - http://localhost:5173
