@@ -17,25 +17,40 @@ import com.ecommerce.backend.product.entity.Product;
 import com.ecommerce.backend.user.entity.User;
 import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class OrderService {
 
+  private static final String IDEMPOTENCY_KEY_PREFIX = "idempotency:order:";
+  private static final Duration IDEMPOTENCY_KEY_TTL = Duration.ofMinutes(5);
+
   private final OrderRepository orderRepository;
   private final CartRepository cartRepository;
   private final PaymentService paymentService;
   private final ApplicationEventPublisher eventPublisher;
+  private final StringRedisTemplate redisTemplate;
 
   @Transactional
-  public OrderResponse createOrder(User user, CreateOrderRequest request) {
+  public OrderResponse createOrder(User user, String idempotencyKey, CreateOrderRequest request) {
+    Boolean acquired =
+        redisTemplate
+            .opsForValue()
+            .setIfAbsent(IDEMPOTENCY_KEY_PREFIX + idempotencyKey, "1", IDEMPOTENCY_KEY_TTL);
+    if (!Boolean.TRUE.equals(acquired)) {
+      throw new ApiException(
+          ErrorCode.DUPLICATE_REQUEST, "Duplicate order request: " + idempotencyKey);
+    }
+
     Cart cart =
         cartRepository
             .findByUserId(user.getId())

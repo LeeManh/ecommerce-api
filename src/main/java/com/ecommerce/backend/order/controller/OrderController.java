@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,8 +28,11 @@ public class OrderController {
 
   @PostMapping
   public ApiResponse<OrderResponse> createOrder(
-      @AuthenticationPrincipal User user, @Valid @RequestBody CreateOrderRequest request) {
-    return ApiResponse.success(orderService.createOrder(user, request), "Order created");
+      @AuthenticationPrincipal User user,
+      @RequestHeader("Idempotency-Key") String idempotencyKey,
+      @Valid @RequestBody CreateOrderRequest request) {
+    return ApiResponse.success(
+        orderService.createOrder(user, idempotencyKey, request), "Order created");
   }
 
   @GetMapping
