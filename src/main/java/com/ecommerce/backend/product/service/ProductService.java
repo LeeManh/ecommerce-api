@@ -16,6 +16,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -48,6 +50,7 @@ public class ProductService {
   }
 
   @Transactional
+  @CacheEvict(value = "products", key = "#id")
   public ProductResponse update(Long id, ProductRequest request) {
     Product product =
         productRepository
@@ -74,6 +77,7 @@ public class ProductService {
   }
 
   @Transactional
+  @CacheEvict(value = "products", key = "#id")
   public void softDelete(Long id) {
     Product product =
         productRepository
@@ -98,6 +102,7 @@ public class ProductService {
         .map(ProductSummaryResponse::from);
   }
 
+  @Cacheable(value = "products", key = "#id")
   public ProductResponse getPublicDetail(Long id) {
     Product product =
         productRepository
