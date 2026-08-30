@@ -51,6 +51,8 @@ public class CartService {
                             .quantity(request.quantity())
                             .build()));
 
+    cartRepository.flush();
+
     return CartResponse.from(cart);
   }
 
