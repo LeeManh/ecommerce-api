@@ -7,6 +7,9 @@ import com.ecommerce.backend.inventory.entity.Inventory;
 import com.ecommerce.backend.inventory.repository.InventoryRepository;
 import com.ecommerce.backend.product.entity.Product;
 import jakarta.transaction.Transactional;
+import java.util.Collection;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -50,6 +53,16 @@ public class InventoryService {
         quantity,
         productId,
         inventory.getQuantity());
+  }
+
+  public int getQuantity(Long productId) {
+    return inventoryRepository.findByProductId(productId).map(Inventory::getQuantity).orElse(0);
+  }
+
+  public Map<Long, Integer> getQuantitiesByProductIds(Collection<Long> productIds) {
+    return inventoryRepository.findByProductIdIn(productIds).stream()
+        .collect(
+            Collectors.toMap(inventory -> inventory.getProduct().getId(), Inventory::getQuantity));
   }
 
   private Inventory getOrThrow(Long productId) {

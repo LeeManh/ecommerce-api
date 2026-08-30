@@ -5,15 +5,16 @@ import com.ecommerce.backend.product.entity.ProductImage;
 import java.math.BigDecimal;
 import java.util.Comparator;
 
-public record ProductSummaryResponse(Long id, String name, BigDecimal price, String thumbnailUrl) {
+public record ProductSummaryResponse(
+    Long id, String name, BigDecimal price, String thumbnailUrl, int quantity) {
 
-  public static ProductSummaryResponse from(Product product) {
+  public static ProductSummaryResponse from(Product product, int quantity) {
     String thumbnail =
         product.getImages().stream()
             .min(Comparator.comparingInt(ProductImage::getDisplayOrder))
             .map(ProductImage::getImageUrl)
             .orElse(null);
     return new ProductSummaryResponse(
-        product.getId(), product.getName(), product.getPrice(), thumbnail);
+        product.getId(), product.getName(), product.getPrice(), thumbnail, quantity);
   }
 }

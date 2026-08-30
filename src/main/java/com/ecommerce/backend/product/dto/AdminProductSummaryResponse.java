@@ -6,9 +6,15 @@ import java.math.BigDecimal;
 import java.util.Comparator;
 
 public record AdminProductSummaryResponse(
-    Long id, String name, String sku, BigDecimal price, boolean active, String thumbnailUrl) {
+    Long id,
+    String name,
+    String sku,
+    BigDecimal price,
+    boolean active,
+    String thumbnailUrl,
+    int quantity) {
 
-  public static AdminProductSummaryResponse from(Product product) {
+  public static AdminProductSummaryResponse from(Product product, int quantity) {
     String thumbnail =
         product.getImages().stream()
             .min(Comparator.comparingInt(ProductImage::getDisplayOrder))
@@ -20,6 +26,7 @@ public record AdminProductSummaryResponse(
         product.getSku(),
         product.getPrice(),
         product.isActive(),
-        thumbnail);
+        thumbnail,
+        quantity);
   }
 }

@@ -30,6 +30,7 @@ public class ProductController {
 
   @GetMapping("/{id}")
   public ApiResponse<ProductResponse> getById(@PathVariable Long id) {
-    return ApiResponse.success(productService.getPublicDetail(id), "OK");
+    ProductResponse detail = productService.getPublicDetail(id);
+    return ApiResponse.success(detail.withQuantity(productService.getStockQuantity(id)), "OK");
   }
 }

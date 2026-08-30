@@ -17,9 +17,10 @@ public record ProductResponse(
     BigDecimal price,
     boolean active,
     Set<String> categories,
-    List<String> images) {
+    List<String> images,
+    int quantity) {
 
-  public static ProductResponse from(Product product) {
+  public static ProductResponse from(Product product, int quantity) {
     return new ProductResponse(
         product.getId(),
         product.getName(),
@@ -31,6 +32,14 @@ public record ProductResponse(
         product.getImages().stream()
             .sorted(Comparator.comparingInt(ProductImage::getDisplayOrder))
             .map(ProductImage::getImageUrl)
-            .toList());
+            .toList(),
+        quantity);
+  }
+
+  // Kept out of the @Cacheable path in ProductService.getPublicDetail — quantity must always be
+  // live, never baked into a cached response, so it's merged in after the cache lookup.
+  public ProductResponse withQuantity(int quantity) {
+    return new ProductResponse(
+        id, name, sku, description, price, active, categories, images, quantity);
   }
 }

@@ -14,12 +14,14 @@ import com.ecommerce.backend.inventory.service.InventoryService;
 import com.ecommerce.backend.product.dto.AdminProductSummaryResponse;
 import com.ecommerce.backend.product.dto.ProductRequest;
 import com.ecommerce.backend.product.dto.ProductResponse;
+import com.ecommerce.backend.product.dto.ProductSummaryResponse;
 import com.ecommerce.backend.product.entity.Category;
 import com.ecommerce.backend.product.entity.Product;
 import com.ecommerce.backend.product.repository.CategoryRepository;
 import com.ecommerce.backend.product.repository.ProductRepository;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -63,6 +65,7 @@ class ProductServiceTest {
     assertThat(response.name()).isEqualTo("iPhone 15");
     assertThat(response.sku()).isEqualTo("IPHONE-15");
     assertThat(response.categories()).containsExactly("Điện thoại");
+    assertThat(response.quantity()).isZero();
     verify(inventoryService).createForProduct(any(Product.class));
   }
 
@@ -125,6 +128,21 @@ class ProductServiceTest {
   }
 
   @Test
+  void update_shouldReturnLiveQuantity_whenProductExists() {
+    Product existing =
+        Product.builder().id(1L).name("Old").sku("OLD-SKU").price(new BigDecimal("100")).build();
+    ProductRequest request =
+        new ProductRequest("New", "OLD-SKU", "desc", new BigDecimal("200"), Set.of(), List.of());
+
+    when(productRepository.findById(1L)).thenReturn(Optional.of(existing));
+    when(inventoryService.getQuantity(1L)).thenReturn(12);
+
+    ProductResponse response = productService.update(1L, request);
+
+    assertThat(response.quantity()).isEqualTo(12);
+  }
+
+  @Test
   void softDelete_shouldSetActiveFalse_whenProductExists() {
     Product product =
         Product.builder()
@@ -152,6 +170,37 @@ class ProductServiceTest {
   }
 
   @Test
+  void getForAdmin_shouldReturnProductWithLiveQuantity() {
+    Product product =
+        Product.builder().id(1L).name("Name").sku("SKU").price(new BigDecimal("100")).build();
+    when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+    when(inventoryService.getQuantity(1L)).thenReturn(9);
+
+    ProductResponse response = productService.getForAdmin(1L);
+
+    assertThat(response.quantity()).isEqualTo(9);
+  }
+
+  @Test
+  void getPublicDetail_shouldNotEmbedQuantity_soCacheStaysStockAgnostic() {
+    Product product =
+        Product.builder().id(1L).name("Name").sku("SKU").price(new BigDecimal("100")).build();
+    when(productRepository.findByIdAndActiveTrue(1L)).thenReturn(Optional.of(product));
+
+    ProductResponse response = productService.getPublicDetail(1L);
+
+    assertThat(response.quantity()).isZero();
+    verify(inventoryService, never()).getQuantity(any());
+  }
+
+  @Test
+  void getStockQuantity_shouldDelegateToInventoryService() {
+    when(inventoryService.getQuantity(1L)).thenReturn(42);
+
+    assertThat(productService.getStockQuantity(1L)).isEqualTo(42);
+  }
+
+  @Test
   void getPublicDetail_shouldThrow_whenProductInactiveOrMissing() {
     when(productRepository.findByIdAndActiveTrue(1L)).thenReturn(Optional.empty());
 
@@ -172,11 +221,13 @@ class ProductServiceTest {
             .active(false)
             .build();
     when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+    when(inventoryService.getQuantity(1L)).thenReturn(3);
 
     ProductResponse response = productService.restore(1L);
 
     assertThat(product.isActive()).isTrue();
     assertThat(response.active()).isTrue();
+    assertThat(response.quantity()).isEqualTo(3);
   }
 
   @Test
@@ -187,6 +238,29 @@ class ProductServiceTest {
         .isInstanceOf(ApiException.class)
         .extracting(ex -> ((ApiException) ex).getCode())
         .isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+  }
+
+  @Test
+  void search_shouldReturnMappedPageWithLiveQuantity() {
+    Product product =
+        Product.builder()
+            .id(1L)
+            .name("iPhone 15")
+            .sku("IPHONE-15")
+            .price(new BigDecimal("100"))
+            .active(true)
+            .build();
+    Pageable pageable = Pageable.unpaged();
+    Page<Product> page = new PageImpl<>(List.of(product));
+
+    when(productRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(page);
+    when(inventoryService.getQuantitiesByProductIds(List.of(1L))).thenReturn(Map.of(1L, 25));
+
+    Page<ProductSummaryResponse> result = productService.search(null, null, pageable);
+
+    assertThat(result.getContent()).hasSize(1);
+    assertThat(result.getContent().get(0).name()).isEqualTo("iPhone 15");
+    assertThat(result.getContent().get(0).quantity()).isEqualTo(25);
   }
 
   @Test
@@ -203,6 +277,7 @@ class ProductServiceTest {
     Page<Product> page = new PageImpl<>(List.of(product));
 
     when(productRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(page);
+    when(inventoryService.getQuantitiesByProductIds(List.of(1L))).thenReturn(Map.of(1L, 7));
 
     Page<AdminProductSummaryResponse> result =
         productService.searchForAdmin(null, null, false, pageable);
@@ -210,5 +285,6 @@ class ProductServiceTest {
     assertThat(result.getContent()).hasSize(1);
     assertThat(result.getContent().get(0).sku()).isEqualTo("OLD-STOCK");
     assertThat(result.getContent().get(0).active()).isFalse();
+    assertThat(result.getContent().get(0).quantity()).isEqualTo(7);
   }
 }

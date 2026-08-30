@@ -16,6 +16,7 @@ import jakarta.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -52,7 +53,7 @@ public class ProductService {
     Product saved = productRepository.save(product);
     inventoryService.createForProduct(saved);
 
-    return ProductResponse.from(saved);
+    return ProductResponse.from(saved, 0);
   }
 
   @Transactional
@@ -79,7 +80,7 @@ public class ProductService {
     product.getImages().clear();
     product.getImages().addAll(buildImages(request.imageUrls(), product));
 
-    return ProductResponse.from(product);
+    return ProductResponse.from(product, inventoryService.getQuantity(id));
   }
 
   @Transactional
@@ -101,7 +102,7 @@ public class ProductService {
             .orElseThrow(
                 () -> new ApiException(ErrorCode.PRODUCT_NOT_FOUND, "Product not found: " + id));
     product.setActive(true);
-    return ProductResponse.from(product);
+    return ProductResponse.from(product, inventoryService.getQuantity(id));
   }
 
   public ProductResponse getForAdmin(Long id) {
@@ -110,22 +111,39 @@ public class ProductService {
             .findById(id)
             .orElseThrow(
                 () -> new ApiException(ErrorCode.PRODUCT_NOT_FOUND, "Product not found: " + id));
-    return ProductResponse.from(product);
+    return ProductResponse.from(product, inventoryService.getQuantity(id));
   }
 
   public Page<ProductSummaryResponse> search(String keyword, Long categoryId, Pageable pageable) {
-    return productRepository
-        .findAll(ProductSpecification.search(keyword, categoryId), pageable)
-        .map(ProductSummaryResponse::from);
+    Page<Product> products =
+        productRepository.findAll(ProductSpecification.search(keyword, categoryId), pageable);
+
+    Map<Long, Integer> quantities =
+        inventoryService.getQuantitiesByProductIds(
+            products.getContent().stream().map(Product::getId).toList());
+
+    return products.map(
+        product ->
+            ProductSummaryResponse.from(product, quantities.getOrDefault(product.getId(), 0)));
   }
 
   public Page<AdminProductSummaryResponse> searchForAdmin(
       String keyword, Long categoryId, Boolean active, Pageable pageable) {
-    return productRepository
-        .findAll(ProductSpecification.searchForAdmin(keyword, categoryId, active), pageable)
-        .map(AdminProductSummaryResponse::from);
+    Page<Product> products =
+        productRepository.findAll(
+            ProductSpecification.searchForAdmin(keyword, categoryId, active), pageable);
+
+    Map<Long, Integer> quantities =
+        inventoryService.getQuantitiesByProductIds(
+            products.getContent().stream().map(Product::getId).toList());
+
+    return products.map(
+        product ->
+            AdminProductSummaryResponse.from(product, quantities.getOrDefault(product.getId(), 0)));
   }
 
+  // quantity is deliberately not part of the cached value (see ProductResponse.withQuantity) —
+  // callers must merge in a live quantity via getStockQuantity() after calling this.
   @Cacheable(value = "products", key = "#id")
   public ProductResponse getPublicDetail(Long id) {
     Product product =
@@ -133,7 +151,11 @@ public class ProductService {
             .findByIdAndActiveTrue(id)
             .orElseThrow(
                 () -> new ApiException(ErrorCode.PRODUCT_NOT_FOUND, "Product not found: " + id));
-    return ProductResponse.from(product);
+    return ProductResponse.from(product, 0);
+  }
+
+  public int getStockQuantity(Long productId) {
+    return inventoryService.getQuantity(productId);
   }
 
   private Set<Category> resolveCategories(Set<Long> categoryIds) {

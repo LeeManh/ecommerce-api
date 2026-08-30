@@ -12,6 +12,8 @@ import com.ecommerce.backend.inventory.entity.Inventory;
 import com.ecommerce.backend.inventory.repository.InventoryRepository;
 import com.ecommerce.backend.product.entity.Product;
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -74,6 +76,22 @@ class InventoryServiceTest {
     inventoryService.restock(1L, 5);
 
     assertThat(inventory.getQuantity()).isEqualTo(15);
+  }
+
+  @Test
+  void getQuantitiesByProductIds_shouldReturnMapKeyedByProductId() {
+    Product product1 =
+        Product.builder().id(1L).name("iPhone").sku("SKU-1").price(new BigDecimal("100")).build();
+    Product product2 =
+        Product.builder().id(2L).name("MacBook").sku("SKU-2").price(new BigDecimal("200")).build();
+    Inventory inventory1 = Inventory.builder().id(1L).product(product1).quantity(10).build();
+    Inventory inventory2 = Inventory.builder().id(2L).product(product2).quantity(20).build();
+    when(inventoryRepository.findByProductIdIn(List.of(1L, 2L)))
+        .thenReturn(List.of(inventory1, inventory2));
+
+    Map<Long, Integer> result = inventoryService.getQuantitiesByProductIds(List.of(1L, 2L));
+
+    assertThat(result).containsExactlyInAnyOrderEntriesOf(Map.of(1L, 10, 2L, 20));
   }
 
   @Test
