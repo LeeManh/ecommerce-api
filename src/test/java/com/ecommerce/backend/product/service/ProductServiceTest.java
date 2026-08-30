@@ -3,6 +3,7 @@ package com.ecommerce.backend.product.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -10,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.ecommerce.backend.common.exception.ApiException;
 import com.ecommerce.backend.common.exception.ErrorCode;
 import com.ecommerce.backend.inventory.service.InventoryService;
+import com.ecommerce.backend.product.dto.AdminProductSummaryResponse;
 import com.ecommerce.backend.product.dto.ProductRequest;
 import com.ecommerce.backend.product.dto.ProductResponse;
 import com.ecommerce.backend.product.entity.Category;
@@ -25,6 +27,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 @ExtendWith(MockitoExtension.class)
 class ProductServiceTest {
@@ -153,5 +159,56 @@ class ProductServiceTest {
         .isInstanceOf(ApiException.class)
         .extracting(ex -> ((ApiException) ex).getCode())
         .isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+  }
+
+  @Test
+  void restore_shouldSetActiveTrue_whenProductExists() {
+    Product product =
+        Product.builder()
+            .id(1L)
+            .name("Name")
+            .sku("SKU")
+            .price(new BigDecimal("100"))
+            .active(false)
+            .build();
+    when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+
+    ProductResponse response = productService.restore(1L);
+
+    assertThat(product.isActive()).isTrue();
+    assertThat(response.active()).isTrue();
+  }
+
+  @Test
+  void restore_shouldThrow_whenProductNotFound() {
+    when(productRepository.findById(99L)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> productService.restore(99L))
+        .isInstanceOf(ApiException.class)
+        .extracting(ex -> ((ApiException) ex).getCode())
+        .isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+  }
+
+  @Test
+  void searchForAdmin_shouldReturnMappedPage_includingInactiveProducts() {
+    Product product =
+        Product.builder()
+            .id(1L)
+            .name("Old Stock")
+            .sku("OLD-STOCK")
+            .price(new BigDecimal("100"))
+            .active(false)
+            .build();
+    Pageable pageable = Pageable.unpaged();
+    Page<Product> page = new PageImpl<>(List.of(product));
+
+    when(productRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(page);
+
+    Page<AdminProductSummaryResponse> result =
+        productService.searchForAdmin(null, null, false, pageable);
+
+    assertThat(result.getContent()).hasSize(1);
+    assertThat(result.getContent().get(0).sku()).isEqualTo("OLD-STOCK");
+    assertThat(result.getContent().get(0).active()).isFalse();
   }
 }

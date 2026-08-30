@@ -27,4 +27,26 @@ public class ProductSpecification {
       return cb.and(predicates.toArray(new Predicate[0]));
     };
   }
+
+  public static Specification<Product> searchForAdmin(
+      String keyword, Long categoryId, Boolean active) {
+    return (root, query, cb) -> {
+      List<Predicate> predicates = new ArrayList<>();
+
+      if (active != null) {
+        predicates.add(cb.equal(root.get("active"), active));
+      }
+
+      if (keyword != null && !keyword.isBlank()) {
+        predicates.add(cb.like(cb.lower(root.get("name")), "%" + keyword.toLowerCase() + "%"));
+      }
+
+      if (categoryId != null) {
+        predicates.add(cb.equal(root.join("categories").get("id"), categoryId));
+        query.distinct(true);
+      }
+
+      return cb.and(predicates.toArray(new Predicate[0]));
+    };
+  }
 }

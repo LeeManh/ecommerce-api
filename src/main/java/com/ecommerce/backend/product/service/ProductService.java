@@ -3,6 +3,7 @@ package com.ecommerce.backend.product.service;
 import com.ecommerce.backend.common.exception.ApiException;
 import com.ecommerce.backend.common.exception.ErrorCode;
 import com.ecommerce.backend.inventory.service.InventoryService;
+import com.ecommerce.backend.product.dto.AdminProductSummaryResponse;
 import com.ecommerce.backend.product.dto.ProductRequest;
 import com.ecommerce.backend.product.dto.ProductResponse;
 import com.ecommerce.backend.product.dto.ProductSummaryResponse;
@@ -92,6 +93,17 @@ public class ProductService {
     product.setActive(false);
   }
 
+  @Transactional
+  public ProductResponse restore(Long id) {
+    Product product =
+        productRepository
+            .findById(id)
+            .orElseThrow(
+                () -> new ApiException(ErrorCode.PRODUCT_NOT_FOUND, "Product not found: " + id));
+    product.setActive(true);
+    return ProductResponse.from(product);
+  }
+
   public ProductResponse getForAdmin(Long id) {
     Product product =
         productRepository
@@ -105,6 +117,13 @@ public class ProductService {
     return productRepository
         .findAll(ProductSpecification.search(keyword, categoryId), pageable)
         .map(ProductSummaryResponse::from);
+  }
+
+  public Page<AdminProductSummaryResponse> searchForAdmin(
+      String keyword, Long categoryId, Boolean active, Pageable pageable) {
+    return productRepository
+        .findAll(ProductSpecification.searchForAdmin(keyword, categoryId, active), pageable)
+        .map(AdminProductSummaryResponse::from);
   }
 
   @Cacheable(value = "products", key = "#id")
