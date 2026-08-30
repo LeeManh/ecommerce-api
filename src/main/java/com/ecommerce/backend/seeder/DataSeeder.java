@@ -14,6 +14,7 @@ import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -80,7 +81,7 @@ public class DataSeeder implements CommandLineRunner {
         "Flagship iPhone với chip A17 Pro, camera 48MP.",
         new BigDecimal("29990000"),
         Set.of(phone.getId()),
-        List.of("https://picsum.photos/seed/iphone15/600/600"),
+        images("iphone15"),
         50);
 
     seedProduct(
@@ -89,7 +90,7 @@ public class DataSeeder implements CommandLineRunner {
         "Laptop mỏng nhẹ, chip M3, pin 18 giờ.",
         new BigDecimal("27990000"),
         Set.of(laptop.getId()),
-        List.of("https://picsum.photos/seed/macbook/600/600"),
+        images("macbook"),
         30);
 
     seedProduct(
@@ -98,7 +99,7 @@ public class DataSeeder implements CommandLineRunner {
         "Flagship Android với AI tích hợp.",
         new BigDecimal("22990000"),
         Set.of(phone.getId()),
-        List.of("https://picsum.photos/seed/galaxy/600/600"),
+        images("galaxy"),
         40);
 
     seedProduct(
@@ -107,7 +108,7 @@ public class DataSeeder implements CommandLineRunner {
         "Laptop Windows cao cấp, màn hình InfinityEdge.",
         new BigDecimal("31990000"),
         Set.of(laptop.getId()),
-        List.of("https://picsum.photos/seed/dellxps/600/600"),
+        images("dellxps"),
         20);
 
     seedProduct(
@@ -116,7 +117,7 @@ public class DataSeeder implements CommandLineRunner {
         "Tai nghe chống ồn chủ động, chip H2.",
         new BigDecimal("5990000"),
         Set.of(accessory.getId()),
-        List.of("https://picsum.photos/seed/airpods/600/600"),
+        images("airpods"),
         100);
 
     seedProduct(
@@ -125,7 +126,7 @@ public class DataSeeder implements CommandLineRunner {
         "Camera AI vượt trội, chip Tensor G3.",
         new BigDecimal("21990000"),
         Set.of(phone.getId()),
-        List.of("https://picsum.photos/seed/pixel8/600/600"),
+        images("pixel8"),
         35);
 
     seedProduct(
@@ -134,7 +135,7 @@ public class DataSeeder implements CommandLineRunner {
         "Laptop gaming mỏng nhẹ, RTX 4060, màn hình OLED 165Hz.",
         new BigDecimal("42990000"),
         Set.of(laptop.getId(), gaming.getId()),
-        List.of("https://picsum.photos/seed/rogzephyrus/600/600"),
+        images("rogzephyrus"),
         15);
 
     seedProduct(
@@ -143,7 +144,7 @@ public class DataSeeder implements CommandLineRunner {
         "Tai nghe chống ồn hàng đầu, âm thanh Hi-Res.",
         new BigDecimal("8490000"),
         Set.of(accessory.getId()),
-        List.of("https://picsum.photos/seed/sonywh1000/600/600"),
+        images("sonywh1000"),
         60);
 
     seedProduct(
@@ -152,7 +153,7 @@ public class DataSeeder implements CommandLineRunner {
         "Máy tính bảng cao cấp, chip M4, màn hình Ultra Retina XDR.",
         new BigDecimal("26990000"),
         Set.of(tablet.getId()),
-        List.of("https://picsum.photos/seed/ipadpro/600/600"),
+        images("ipadpro"),
         25);
 
     seedProduct(
@@ -161,7 +162,7 @@ public class DataSeeder implements CommandLineRunner {
         "Máy tính bảng giá tốt, màn hình 144Hz.",
         new BigDecimal("7990000"),
         Set.of(tablet.getId()),
-        List.of("https://picsum.photos/seed/xiaomipad6/600/600"),
+        images("xiaomipad6"),
         45);
 
     seedProduct(
@@ -170,7 +171,7 @@ public class DataSeeder implements CommandLineRunner {
         "Đồng hồ thông minh, chip S9, theo dõi sức khoẻ toàn diện.",
         new BigDecimal("10990000"),
         Set.of(smartwatch.getId()),
-        List.of("https://picsum.photos/seed/applewatch9/600/600"),
+        images("applewatch9"),
         40);
 
     seedProduct(
@@ -179,7 +180,7 @@ public class DataSeeder implements CommandLineRunner {
         "Đồng hồ thông minh Android, đo điện tâm đồ.",
         new BigDecimal("7490000"),
         Set.of(smartwatch.getId()),
-        List.of("https://picsum.photos/seed/galaxywatch6/600/600"),
+        images("galaxywatch6"),
         50);
 
     seedProduct(
@@ -188,7 +189,7 @@ public class DataSeeder implements CommandLineRunner {
         "Loa bluetooth di động, chống nước IP67.",
         new BigDecimal("2990000"),
         Set.of(speaker.getId()),
-        List.of("https://picsum.photos/seed/jblflip6/600/600"),
+        images("jblflip6"),
         70);
 
     seedProduct(
@@ -197,7 +198,7 @@ public class DataSeeder implements CommandLineRunner {
         "Chuột gaming siêu nhẹ, cảm biến HERO 25K.",
         new BigDecimal("2690000"),
         Set.of(gaming.getId(), accessory.getId()),
-        List.of("https://picsum.photos/seed/logitechgprox/600/600"),
+        images("logitechgprox"),
         80);
 
     seedProduct(
@@ -206,10 +207,16 @@ public class DataSeeder implements CommandLineRunner {
         "Bàn phím cơ gaming, switch Green, đèn RGB Chroma.",
         new BigDecimal("3490000"),
         Set.of(gaming.getId(), accessory.getId()),
-        List.of("https://picsum.photos/seed/razerblackwidow/600/600"),
+        images("razerblackwidow"),
         55);
 
     log.info("Seeded 7 categories and 15 products");
+  }
+
+  private static List<String> images(String seed) {
+    return IntStream.rangeClosed(1, 4)
+        .mapToObj(i -> "https://picsum.photos/seed/%s-%d/600/600".formatted(seed, i))
+        .toList();
   }
 
   private void seedProduct(
